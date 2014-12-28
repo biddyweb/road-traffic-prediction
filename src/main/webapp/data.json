@@ -1,0 +1,65 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            30.420817,
+            59.898037
+          ],
+          [
+            30.423564,
+            59.896374
+          ]
+        ]
+      },
+      "properties": {
+        "popupContent": "This is slow traffic.",
+        "style": {
+          "color": "#CC0000"
+        }
+      },
+      "id": 1
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            30.420817,
+            59.898037
+          ],
+          [
+            30.419090,
+            59.899032
+          ]
+        ]
+      },
+      "properties": {
+        "popupContent": "This is fast traffic",
+        "style": {
+          "color": "#009900"
+        }
+      },
+      "id": 2
+    },
+    {
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.423564,
+          59.896374
+        ]
+      },
+      "type": "Feature",
+      "properties": {
+        "popupContent": "This is sample map marker"
+      },
+      "id": 1
+    }
+  ]
+}
