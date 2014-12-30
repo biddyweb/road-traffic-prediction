@@ -11,7 +11,6 @@ import org.snoopdesigns.roadtraffic.geojson.object.Feature;
 import org.snoopdesigns.roadtraffic.geojson.object.FeatureCollection;
 import org.snoopdesigns.roadtraffic.geojson.object.Properties;
 import org.snoopdesigns.roadtraffic.geojson.object.Style;
-import org.snoopdesigns.roadtraffic.nnetwork.RoadTrafficPredictionPerceptron;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -43,7 +42,7 @@ public class MainApplicationServlet extends HttpServlet {
                             new Point(path.getEndCoords()[0], path.getEndCoords()[1]))));
                     lineFeature.setProperties(
                             new Properties(
-                                    "Speed: " + path.getPathSpeed() + ", ID = " + path.getId() + "<br>" + getPathStats(utils, path),
+                                    "Speed: " + path.getPathSpeed() + ", ID = " + path.getId(),
                                     new Style(controller.calculatePathColor(path.getPathSpeed()))));
                     lineFeature.setId(String.valueOf(path.getId()));
                     features.add(lineFeature);
@@ -66,16 +65,31 @@ public class MainApplicationServlet extends HttpServlet {
                 out.print(new Gson().toJson(new FeatureCollection(features)));
             } else if (request.getParameter("action").equals("time")) {
                 out.print("{\"time\": \"" + controller.getCurrentDatetime() + "\"}");
-            } else if (request.getParameter("action").equals("test")) {
-                new RoadTrafficPredictionPerceptron(utils).test();
-            } else if (request.getParameter("action").equals("test1")) {
-                for(LearningRules rule : utils.getAllRules()) {
-                    out.println(rule);
-                }
+            } else if (request.getParameter("action").equals("predictedtime")) {
+                out.print("{\"time\": \"" + controller.getPredictedDatetime() + "\"}");
             } else if (request.getParameter("action").equals("getstats")) {
                 for(PathStatistics stat : utils.getAllStatistics()) {
                     out.println(stat);
                 }
+            } else if (request.getParameter("action").equals("getrules")) {
+                out.println("Total rules size: " + utils.getAllRules().size());
+
+                for(RoadPath path : utils.getAllPaths()) {
+                    out.println("Size for path: " + path.getId() + ": " + utils.getRulesByPath(path.getId()).size());
+                }
+
+                for(LearningRules rule : utils.getAllRules()) {
+                    out.println(rule);
+                }
+            } else if (request.getParameter("action").equals("getpathrules")) {
+
+                for(LearningRules rule : utils.getRulesByPath(Integer.valueOf(request.getParameter("path")))) {
+                    out.println(rule);
+                }
+            } else if (request.getParameter("action").equals("setpathspeed")) {
+                RoadPathSampleSpeed.setPathSpeed(Integer.valueOf(request.getParameter("id")),
+                        Integer.valueOf(request.getParameter("hour")),
+                        Integer.valueOf(request.getParameter("speed")));
             }
         }
         out.flush();

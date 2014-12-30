@@ -84,4 +84,30 @@ public class LearningRules {
                 ", actualResult=" + actualResult +
                 '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof LearningRules)) return false;
+
+        LearningRules that = (LearningRules) o;
+
+        if (!actualResult.equals(that.actualResult)) return false;
+        if (!dayOfWeekNumber.equals(that.dayOfWeekNumber)) return false;
+        if (!hourNumber.equals(that.hourNumber)) return false;
+        if (!pathCurrentSpeed.equals(that.pathCurrentSpeed)) return false;
+        if (!pathId.equals(that.pathId)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = pathId.hashCode();
+        result = 31 * result + pathCurrentSpeed.hashCode();
+        result = 31 * result + hourNumber.hashCode();
+        result = 31 * result + dayOfWeekNumber.hashCode();
+        result = 31 * result + actualResult.hashCode();
+        return result;
+    }
 }

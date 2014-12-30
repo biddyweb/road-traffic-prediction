@@ -1,7 +1,6 @@
 package org.snoopdesigns.roadtraffic;
 
 import org.snoopdesigns.roadtraffic.db.DatabaseUtils;
-import org.snoopdesigns.roadtraffic.db.PathStatistics;
 import org.snoopdesigns.roadtraffic.db.RoadPath;
 
 import javax.persistence.EntityManagerFactory;
@@ -9,7 +8,6 @@ import javax.persistence.Persistence;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.util.Calendar;
-import java.util.Date;
 
 public class MainApplicationListener  implements ServletContextListener {
 
@@ -43,9 +41,12 @@ public class MainApplicationListener  implements ServletContextListener {
     }
 
     private void initDB(DatabaseUtils dbUtils, Integer currentHour) {
+        int i=1;
         for(double[][] coords : RoadPathCoordinates.pathCoordinates) {
-            RoadPath path = new RoadPath(coords[0], coords[1], RoadPathSampleSpeed.pathSpeed.get(currentHour));
+            RoadPath path = new RoadPath(coords[0], coords[1], RoadPathSampleSpeed.pathSpeed.get(i).get(currentHour));
+            path.setId(i);
             dbUtils.addNewPath(path);
+            i++;
         }
     }
 }

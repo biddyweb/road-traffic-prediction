@@ -18,6 +18,12 @@ public class Controller {
     public String getCurrentDatetime() {
         return df.format(currentDatetime.getTime());
     }
+    public String getPredictedDatetime() {
+        Calendar incrementedTime = Calendar.getInstance(currentDatetime.getTimeZone());
+        incrementedTime.setTime(currentDatetime.getTime());
+        incrementedTime.add(Calendar.HOUR_OF_DAY, 1);
+        return df.format(incrementedTime.getTime());
+    }
 
     private Calendar currentDatetime;
     private ScheduledExecutorService executorService;
@@ -45,12 +51,11 @@ public class Controller {
                 updateCurrentPathsSpeed();
                 currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
             }
-        }, 2, 2, TimeUnit.SECONDS);
+        }, 1, 1, TimeUnit.SECONDS);
     }
 
     public Integer getPathSpeedPrediction(Integer currentPathSpeed, Integer pathId) {
         Integer speed = nnetwork.calculateSpeedPrediction(currentPathSpeed, pathId, currentDatetime.get(Calendar.HOUR_OF_DAY), 1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/);
-        LearningRules rule = new LearningRules(pathId, currentPathSpeed, currentDatetime.get(Calendar.HOUR_OF_DAY), 1, speed);
         return speed;
     }
 
@@ -76,13 +81,15 @@ public class Controller {
         for(RoadPath path : databaseUtils.getAllPaths()) {
             databaseUtils.addNewPathStatistics(new PathStatistics(path.getId(), currentDatetime.getTime().getTime(), path.getPathSpeed()));
             databaseUtils.addNewRule(new LearningRules(path.getId(), path.getPathSpeed(), currentDatetime.get(Calendar.HOUR_OF_DAY),
-                    1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/, getPathSpeedByHour(incrementedTime.get(Calendar.HOUR_OF_DAY))));
-            if(path.getPathSpeed() >= 10) databaseUtils.updatePathSpeed(path.getId(), getPathSpeedByHour(incrementedTime.get(Calendar.HOUR_OF_DAY)));
+                    1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/, getPathSpeedByHour(path.getId(), incrementedTime.get(Calendar.HOUR_OF_DAY))));
+            if(path.getPathSpeed() >= 10) databaseUtils.updatePathSpeed(path.getId(), getPathSpeedByHour(path.getId(), incrementedTime.get(Calendar.HOUR_OF_DAY)));
         }
-        nnetwork.learn();
+        if(currentDatetime.get(Calendar.HOUR_OF_DAY) == 0) {
+            nnetwork.learn();
+        }
     }
 
-    private Integer getPathSpeedByHour(Integer hour) {
-        return RoadPathSampleSpeed.pathSpeed.get(hour);
+    private Integer getPathSpeedByHour(Integer pathId, Integer hour) {
+        return RoadPathSampleSpeed.pathSpeed.get(pathId).get(hour);
     }
 }

@@ -1,9 +1,9 @@
 package org.snoopdesigns.roadtraffic.db;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.util.Arrays;
+
+@SequenceGenerator(name="seq", initialValue=1, allocationSize=100)
 
 @Entity
 public class RoadPath {
@@ -14,7 +14,7 @@ public class RoadPath {
     public static final String PATH_COLOR_BLACK = "#000000";
 
     @Id
-    @GeneratedValue
+    //@GeneratedValue(strategy=GenerationType.SEQUENCE, generator="seq")
     private Integer id;
     private double[] startCoords;
     private double[] endCoords;

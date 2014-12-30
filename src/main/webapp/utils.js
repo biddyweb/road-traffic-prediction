@@ -74,8 +74,8 @@
 
 		window.onload = function() {
 
-        	mapCurrent = L.map('mapCurrent').setView([59.896312, 30.423419], 16);
-        	mapPrediction = L.map('mapPrediction').setView([59.896312, 30.423419], 16);
+        	mapCurrent = L.map('mapCurrent').setView([59.896312, 30.423419], 15);
+        	mapPrediction = L.map('mapPrediction').setView([59.896312, 30.423419], 15);
 			drawMaps(true);
         	setInterval(drawMaps, 1000);
 		}
@@ -88,6 +88,11 @@
 			$.getJSON("/webapp-main/api?action=time", function(json) {
                 var elem = document.getElementById("time");
                 elem.innerHTML="<h3>Current time: " + json.time + " </h3>";
+            });
+
+            $.getJSON("/webapp-main/api?action=predictedtime", function(json) {
+                var elem = document.getElementById("predictedtime");
+                elem.innerHTML="<h3>Predicted traffic at: " + json.time + " </h3>";
             });
 
         	$.getJSON("/webapp-main/api?action=current", function(json) {

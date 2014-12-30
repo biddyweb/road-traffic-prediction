@@ -1,22 +1,23 @@
 package org.snoopdesigns.roadtraffic.db;
 
 import javax.persistence.EntityManager;
-import javax.persistence.LockModeType;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.Set;
 
 public class DatabaseUtils {
 
     private EntityManager em;
-    private List<LearningRules> learningRuleses = new ArrayList<LearningRules>();
+    private Set<LearningRules> learningRuleses = new HashSet<LearningRules>();
 
     public DatabaseUtils(EntityManager entityManager) {
         this.em = entityManager;
         deleteAllStatistics();
         deleteAllPaths();
-        //deleteAllRules();
+        deleteAllRules();
+
+        //em.createNativeQuery("ALTER TABLE RoadPath ALTER COLUMN id RESTART WITH 1").executeUpdate();
     }
 
     public List<RoadPath> getAllPaths() {
@@ -88,16 +89,33 @@ public class DatabaseUtils {
         /*em.getTransaction().begin();
         em.persist(rule);
         em.getTransaction().commit();*/
-        learningRuleses.add(rule);
+        if(!learningRuleses.contains(rule)) {
+            learningRuleses.add(rule);
+        }
     }
 
-    public List<LearningRules> getAllRules() {
+    public Set<LearningRules> getAllRules() {
         /*try {
             return em.createQuery("SELECT t FROM LearningRules t").getResultList();
         } catch (Exception e) {
             return Collections.emptyList();
         }*/
         return learningRuleses;
+    }
+
+    public Set<LearningRules> getRulesByPath(Integer pathId) {
+        /*try {
+            return em.createQuery("SELECT t FROM LearningRules t").getResultList();
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }*/
+        Set<LearningRules> result = new HashSet<LearningRules>();
+        for(LearningRules rule : learningRuleses) {
+            if(rule.getPathId() == pathId) {
+                result.add(rule);
+            }
+        }
+        return result;
     }
 
     public void deleteAllRules() {
