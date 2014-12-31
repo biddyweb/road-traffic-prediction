@@ -30,6 +30,8 @@ public class Controller {
     private DatabaseUtils databaseUtils;
     private RoadTrafficPredictionPerceptron nnetwork;
 
+    private ScheduledFuture<?> timer;
+
     public Controller(DatabaseUtils utils) {
         nnetwork = new RoadTrafficPredictionPerceptron(utils);
         databaseUtils = utils;
@@ -44,19 +46,31 @@ public class Controller {
         currentDatetime.set(Calendar.MINUTE, 00);
         currentDatetime.set(Calendar.SECOND, 00);
         executorService = Executors.newSingleThreadScheduledExecutor();
-        executorService.scheduleAtFixedRate(new Runnable() {
+        timer = executorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
                 updateCurrentPathsSpeed();
                 currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
+                System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
             }
-        }, 1, 1, TimeUnit.SECONDS);
+        }, 1, 3, TimeUnit.SECONDS);
     }
 
     public Integer getPathSpeedPrediction(Integer currentPathSpeed, Integer pathId) {
         Integer speed = nnetwork.calculateSpeedPrediction(currentPathSpeed, pathId, currentDatetime.get(Calendar.HOUR_OF_DAY), 1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/);
         return speed;
+    }
+
+    public void reinitTimer(Integer interval) {
+        timer.cancel(true);
+        timer = executorService.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                updateCurrentPathsSpeed();
+                currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
+                System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
+            }
+        }, interval, interval, TimeUnit.SECONDS);
     }
 
     public void destroy() {

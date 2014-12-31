@@ -1,18 +1,13 @@
 package org.snoopdesigns.roadtraffic.nnetwork;
 
-import org.neuroph.core.NeuralNetwork;
 import org.neuroph.core.data.DataSet;
 import org.neuroph.core.data.DataSetRow;
 import org.neuroph.nnet.MultiLayerPerceptron;
-import org.neuroph.nnet.Perceptron;
-import org.neuroph.nnet.learning.BackPropagation;
 import org.neuroph.util.TransferFunctionType;
 import org.snoopdesigns.roadtraffic.db.DatabaseUtils;
 import org.snoopdesigns.roadtraffic.db.LearningRules;
 
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,11 +15,11 @@ public class RoadTrafficPredictionPerceptron {
 
 
     private final DatabaseUtils databaseUtils;
-    private Perceptron nnetwork;
+    private MultiLayerPerceptron nnetwork;
 
     public RoadTrafficPredictionPerceptron(DatabaseUtils databaseUtils) {
         this.databaseUtils = databaseUtils;
-        nnetwork = new Perceptron(120, 30);
+        nnetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 120, 30);
     }
 
     public Integer calculateSpeedPrediction(Integer currentSpeed, Integer pathId, Integer hourNumber, Integer dayOfWeekNumber) {
@@ -33,11 +28,15 @@ public class RoadTrafficPredictionPerceptron {
         nnetwork.setInput(dataRow.getInput());
         nnetwork.calculate();
         double[] networkOutput = nnetwork.getOutput();
-        //System.out.println("Output for path " + pathId + ": " + Arrays.toString(networkOutput) );
-        return parseIntegerFromArray(networkOutput);
+        Integer result =  parseIntegerFromArray(networkOutput);
+        System.out.println("Output for path " + pathId + ": " + result);
+        return result;
     }
 
     public void learn() {
+        nnetwork.reset();
+        nnetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 120, 30);
+        nnetwork.reset();
         DataSet trainingSet = new DataSet(120, 30);
         for(LearningRules rule : databaseUtils.getAllRules()) {
             trainingSet.addRow(new DataSetRow(concat(
@@ -47,7 +46,9 @@ public class RoadTrafficPredictionPerceptron {
                     parseNum(rule.getDayOfWeekNumber())),
                     parseNum(rule.getActualResult())));
         }
-        nnetwork.learn(trainingSet);
+
+        nnetwork.getLearningRule().setMaxIterations(5000);
+        nnetwork.learnInNewThread(trainingSet);
         System.out.println("Neuro network learned successfully!");
     }
 
@@ -65,6 +66,48 @@ public class RoadTrafficPredictionPerceptron {
     }
 
     public Integer parseIntegerFromArray(double[] array) {
+
+        List<Integer> tens = new ArrayList<Integer>();
+        List<Double> tmp = new ArrayList<Double>();
+        for(int i=10;i<20;i++) {
+            tmp.add(array[i]);
+        }
+        double maxTensValue = Collections.max(tmp);
+        for(int i=10;i<20;i++) {
+            if(array[i] > maxTensValue / 3 * 2) {
+                tens.add(i-10);
+            }
+        }
+
+        tmp.clear();
+        List<Integer> units = new ArrayList<Integer>();
+
+        for(int i=20;i<30;i++) {
+            tmp.add(array[i]);
+        }
+        double maxUnitsValue = Collections.max(tmp);
+
+        for(int i=20;i<30;i++) {
+            tmp.add(array[i]);
+            if(array[i] > maxUnitsValue / 3 * 2) {
+                units.add(i-20);
+            }
+        }
+
+
+
+        int minTens = Collections.min(tens);
+        int maxTens = Collections.max(tens);
+        int minUnits = Collections.min(units);
+        int maxUnits = Collections.max(units);
+
+        int ten = (minTens + maxTens) / 2;
+        int unit = (minUnits + maxUnits) / 2;
+
+        return 10 * ten + unit;
+    }
+
+    /*public Integer parseIntegerFromArray(double[] array) {
         double max = -1;
         int maxIndex = 0;
         for(int i=0;i<10;i++) {
@@ -81,6 +124,7 @@ public class RoadTrafficPredictionPerceptron {
         for(int i=10;i<20;i++) {
             if(array[i] > max) {
                 max = array[i];
+                if(array[i] > 0.1) System.out.println("Max: " + Integer.valueOf(i-10) + ": " + array[i]);
                 maxIndex = i-10;
             }
         }
@@ -98,7 +142,7 @@ public class RoadTrafficPredictionPerceptron {
         int units = maxIndex;
 
         return 100 * hundreds + 10 * tens + units;
-    }
+    }*/
 
     public static double[] parseNum(Integer num) {
         Integer first = 0;

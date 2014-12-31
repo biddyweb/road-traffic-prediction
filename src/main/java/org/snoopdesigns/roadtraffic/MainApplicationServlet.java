@@ -90,6 +90,9 @@ public class MainApplicationServlet extends HttpServlet {
                 RoadPathSampleSpeed.setPathSpeed(Integer.valueOf(request.getParameter("id")),
                         Integer.valueOf(request.getParameter("hour")),
                         Integer.valueOf(request.getParameter("speed")));
+            } else if (request.getParameter("action").equals("setupdate")) {
+                Integer interval = Integer.valueOf(request.getParameter("sec"));
+                controller.reinitTimer(interval);
             }
         }
         out.flush();
