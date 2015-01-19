@@ -29,7 +29,7 @@ public class RoadTrafficPredictionPerceptron {
         nnetwork.calculate();
         double[] networkOutput = nnetwork.getOutput();
         Integer result =  parseIntegerFromArray(networkOutput);
-        System.out.println("Output for path " + pathId + ": " + result);
+        //System.out.println("Output for path " + pathId + ": " + result);
         return result;
     }
 
@@ -48,24 +48,40 @@ public class RoadTrafficPredictionPerceptron {
         }
 
         nnetwork.getLearningRule().setMaxIterations(5000);
-        nnetwork.learnInNewThread(trainingSet);
+        System.out.println("Starting network learn....");
+        nnetwork.learn(trainingSet);
         System.out.println("Neuro network learned successfully!");
     }
 
-    public void test() {
-        DataSet trainingSet1 = new DataSet(120, 30);
-        System.out.println(1);
-        trainingSet1.addRow(new DataSetRow(concat(parseNum(55), parseNum(1), parseNum(12), parseNum(1)), parseNum(40)));
+    public static void test() {
+        MultiLayerPerceptron nn = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 120, 30);
+        DataSet trainingSet = new DataSet(120, 30);
 
-        nnetwork.learn(trainingSet1);
-        System.out.println(3);
+        trainingSet.addRow(new DataSetRow(concat(
+                parseNum(60),
+                parseNum(1),
+                parseNum(10),
+                parseNum(1)),
+                parseNum(60)));
+        trainingSet.addRow(new DataSetRow(concat(
+                parseNum(60),
+                parseNum(1),
+                parseNum(10),
+                parseNum(1)),
+                parseNum(10)));
 
-        System.out.println("1:" + calculateSpeedPrediction(55, 1, 12, 1));
+        nn.getLearningRule().setMaxIterations(1000);
+        nn.learn(trainingSet);
 
-        System.out.println("2:" + calculateSpeedPrediction(45, 14, 8, 4));
+        DataSetRow dataRow = new DataSetRow(concat(parseNum(60), parseNum(1), parseNum(10), parseNum(1)), parseNum(0));
+        nn.setInput(dataRow.getInput());
+        nn.calculate();
+        double[] networkOutput = nn.getOutput();
+        Integer result =  parseIntegerFromArray(networkOutput);
+        System.out.println("Output for path :" + result);
     }
 
-    public Integer parseIntegerFromArray(double[] array) {
+    public static Integer parseIntegerFromArray(double[] array) {
 
         List<Integer> tens = new ArrayList<Integer>();
         List<Double> tmp = new ArrayList<Double>();
@@ -104,7 +120,7 @@ public class RoadTrafficPredictionPerceptron {
         int ten = (minTens + maxTens) / 2;
         int unit = (minUnits + maxUnits) / 2;
 
-        return 10 * ten + unit;
+        return ((10 * (minTens) + minUnits) + (10 * (maxTens) + maxUnits)) / 2;
     }
 
     /*public Integer parseIntegerFromArray(double[] array) {

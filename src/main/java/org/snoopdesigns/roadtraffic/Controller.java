@@ -29,12 +29,14 @@ public class Controller {
     private ScheduledExecutorService executorService;
     private DatabaseUtils databaseUtils;
     private RoadTrafficPredictionPerceptron nnetwork;
+    private Integer currentInterval; // in seconds
 
     private ScheduledFuture<?> timer;
 
     public Controller(DatabaseUtils utils) {
         nnetwork = new RoadTrafficPredictionPerceptron(utils);
         databaseUtils = utils;
+        currentInterval = 3;
     }
 
     public void start() {
@@ -53,7 +55,7 @@ public class Controller {
                 currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
                 System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
             }
-        }, 1, 3, TimeUnit.SECONDS);
+        }, 1, currentInterval, TimeUnit.SECONDS);
     }
 
     public Integer getPathSpeedPrediction(Integer currentPathSpeed, Integer pathId) {
@@ -61,8 +63,14 @@ public class Controller {
         return speed;
     }
 
+    public Integer getPathSpeedPrediction(Integer currentPathSpeed, Integer pathId, Integer hour) {
+        Integer speed = nnetwork.calculateSpeedPrediction(currentPathSpeed, pathId, hour, 1);
+        return speed;
+    }
+
     public void reinitTimer(Integer interval) {
         timer.cancel(true);
+        currentInterval = interval;
         timer = executorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -70,7 +78,7 @@ public class Controller {
                 currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
                 System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
             }
-        }, interval, interval, TimeUnit.SECONDS);
+        }, currentInterval, currentInterval, TimeUnit.SECONDS);
     }
 
     public void destroy() {
@@ -99,7 +107,22 @@ public class Controller {
             if(path.getPathSpeed() >= 10) databaseUtils.updatePathSpeed(path.getId(), getPathSpeedByHour(path.getId(), incrementedTime.get(Calendar.HOUR_OF_DAY)));
         }
         if(currentDatetime.get(Calendar.HOUR_OF_DAY) == 0) {
-            nnetwork.learn();
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    timer.cancel(true);
+                    nnetwork.learn();
+                    timer = executorService.scheduleAtFixedRate(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateCurrentPathsSpeed();
+                            currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
+                            System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
+                        }
+                    }, currentInterval, currentInterval, TimeUnit.SECONDS);
+                }
+            };
+            new Thread(r).start();
         }
     }
 

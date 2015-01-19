@@ -67,11 +67,11 @@ public class MainApplicationServlet extends HttpServlet {
                 out.print("{\"time\": \"" + controller.getCurrentDatetime() + "\"}");
             } else if (request.getParameter("action").equals("predictedtime")) {
                 out.print("{\"time\": \"" + controller.getPredictedDatetime() + "\"}");
-            } else if (request.getParameter("action").equals("getstats")) {
+            } else if (request.getParameter("action").equals("getstats")) {  // /?action=getstats function
                 for(PathStatistics stat : utils.getAllStatistics()) {
                     out.println(stat);
                 }
-            } else if (request.getParameter("action").equals("getrules")) {
+            } else if (request.getParameter("action").equals("getrules")) {  // /?action=getrules function
                 out.println("Total rules size: " + utils.getAllRules().size());
 
                 for(RoadPath path : utils.getAllPaths()) {
@@ -81,16 +81,21 @@ public class MainApplicationServlet extends HttpServlet {
                 for(LearningRules rule : utils.getAllRules()) {
                     out.println(rule);
                 }
-            } else if (request.getParameter("action").equals("getpathrules")) {
+            } else if (request.getParameter("action").equals("getpathrules")) { // /?action=getpathrules?path=1 function
 
                 for(LearningRules rule : utils.getRulesByPath(Integer.valueOf(request.getParameter("path")))) {
                     out.println(rule);
                 }
-            } else if (request.getParameter("action").equals("setpathspeed")) {
+            } else if (request.getParameter("action").equals("getprediction")) { // /?action=getprediction?path=1&hour=20&speed=60 function
+
+                out.print(controller.getPathSpeedPrediction(Integer.valueOf(request.getParameter("speed")),
+                        Integer.valueOf(request.getParameter("path")),
+                        Integer.valueOf(request.getParameter("hour"))));
+            } else if (request.getParameter("action").equals("setpathspeed")) { // /?action=setpathspeed&id={pathid}&hour=12&speed=45 function
                 RoadPathSampleSpeed.setPathSpeed(Integer.valueOf(request.getParameter("id")),
                         Integer.valueOf(request.getParameter("hour")),
                         Integer.valueOf(request.getParameter("speed")));
-            } else if (request.getParameter("action").equals("setupdate")) {
+            } else if (request.getParameter("action").equals("setupdate")) { // /?action=setupdate&sec=2 function
                 Integer interval = Integer.valueOf(request.getParameter("sec"));
                 controller.reinitTimer(interval);
             }

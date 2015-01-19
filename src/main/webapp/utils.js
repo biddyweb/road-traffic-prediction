@@ -7,6 +7,13 @@
 		var mapDataCurrent;
 		var mapDataPrediction;
 
+		function getParameterByName(name) {
+            name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+            var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+                results = regex.exec(location.search);
+            return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+        }
+
 		function onEachFeature(feature, layer) {
 			var popupContent = "";
 
@@ -74,10 +81,15 @@
 
 		window.onload = function() {
 
+			var interval = getParameterByName('interval');
         	mapCurrent = L.map('mapCurrent').setView([59.896312, 30.423419], 15);
         	mapPrediction = L.map('mapPrediction').setView([59.896312, 30.423419], 15);
 			drawMaps(true);
-        	setInterval(drawMaps, 1000);
+			if(interval != null && interval != '') {
+        		setInterval(drawMaps, interval);
+        	} else {
+        		setInterval(drawMaps, 1000);
+        	}
 		}
 
 		function drawMaps(first) {
