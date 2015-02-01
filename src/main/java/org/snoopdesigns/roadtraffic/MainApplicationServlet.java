@@ -54,7 +54,7 @@ public class MainApplicationServlet extends HttpServlet {
                     Feature lineFeature = new Feature(new LineString(Arrays.asList(
                             new Point(path.getStartCoords()[0], path.getStartCoords()[1]),
                             new Point(path.getEndCoords()[0], path.getEndCoords()[1]))));
-                    Integer pathSpeedPrediction = controller.getPathSpeedPrediction(path.getPathSpeed(), path.getId());
+                    Integer pathSpeedPrediction = controller.getPathSpeedPrediction(path.getId());
                     lineFeature.setProperties(
                             new Properties(
                                     "Speed: " + pathSpeedPrediction + ", ID = " + path.getId(),
@@ -71,6 +71,8 @@ public class MainApplicationServlet extends HttpServlet {
                 for(PathStatistics stat : utils.getAllStatistics()) {
                     out.println(stat);
                 }
+            } else if (request.getParameter("action").equals("getpathstats")) {  // /?action=getstats function
+                out.print(this.getPathStats(utils, Integer.valueOf(request.getParameter("id"))));
             } else if (request.getParameter("action").equals("getrules")) {  // /?action=getrules function
                 out.println("Total rules size: " + utils.getAllRules().size());
 
@@ -88,7 +90,7 @@ public class MainApplicationServlet extends HttpServlet {
                 }
             } else if (request.getParameter("action").equals("getprediction")) { // /?action=getprediction?path=1&hour=20&speed=60 function
 
-                out.print(controller.getPathSpeedPrediction(Integer.valueOf(request.getParameter("speed")),
+                out.print(controller.getPathSpeedPrediction(
                         Integer.valueOf(request.getParameter("path")),
                         Integer.valueOf(request.getParameter("hour"))));
             } else if (request.getParameter("action").equals("setpathspeed")) { // /?action=setpathspeed&id={pathid}&hour=12&speed=45 function
@@ -104,15 +106,15 @@ public class MainApplicationServlet extends HttpServlet {
         out.close();
     }
 
-    private String getPathStats(DatabaseUtils utils, RoadPath path) {
+    private String getPathStats(DatabaseUtils utils, Integer path) {
         DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
         StringBuilder sb = new StringBuilder();
-        for(PathStatistics stat : utils.getStatisticsByPath(path)) {
+        for(PathStatistics stat : utils.getStatisticsByPathId(path, 3)) {
             sb.append(df.format(new Date(stat.getTimestamp())));
             sb.append(": ");
             sb.append(stat.getPathSpeed());
             sb.append("km/h");
-            sb.append("<br>");
+            sb.append("\n");
         }
         return sb.toString();
     }

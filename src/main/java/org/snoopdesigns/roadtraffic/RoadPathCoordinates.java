@@ -42,7 +42,7 @@ public class RoadPathCoordinates {
         pathCoordinates.add(new double[][]{new double[]{59.896380, 30.423562}, new double[]{59.897156, 30.422194}});
         pathCoordinates.add(new double[][]{new double[]{59.897156, 30.422194}, new double[]{59.898033, 30.420789}});
         pathCoordinates.add(new double[][]{new double[]{59.898033, 30.420789}, new double[]{59.899147, 30.418836}});
-        /*pathCoordinates.add(new double[][]{new double[]{59.899147, 30.418836}, new double[]{59.898533, 30.416100}});
+        pathCoordinates.add(new double[][]{new double[]{59.899147, 30.418836}, new double[]{59.898533, 30.416100}});
         pathCoordinates.add(new double[][]{new double[]{59.898533, 30.416100}, new double[]{59.898006, 30.413482}});
         pathCoordinates.add(new double[][]{new double[]{59.898006, 30.413482}, new double[]{59.897145, 30.411369}});
         pathCoordinates.add(new double[][]{new double[]{59.897145, 30.411369}, new double[]{59.896435, 30.409663}});
@@ -110,7 +110,7 @@ public class RoadPathCoordinates {
         pathCoordinates.add(new double[][]{new double[]{59.901191, 30.421824}, new double[]{59.900782, 30.421304}});
         pathCoordinates.add(new double[][]{new double[]{59.900782, 30.421304}, new double[]{59.900292, 30.420692}});
         pathCoordinates.add(new double[][]{new double[]{59.900292, 30.420692}, new double[]{59.899770, 30.420016}});
-        pathCoordinates.add(new double[][]{new double[]{59.899770, 30.420016}, new double[]{59.899031, 30.419072}});*/
+        pathCoordinates.add(new double[][]{new double[]{59.899770, 30.420016}, new double[]{59.899031, 30.419072}});
 
 
         //replacing lat and lon

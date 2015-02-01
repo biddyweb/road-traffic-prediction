@@ -8,10 +8,15 @@ import org.snoopdesigns.roadtraffic.nnetwork.RoadTrafficPredictionPerceptron;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.List;
 import java.util.concurrent.*;
 
 public class Controller {
+
+    public final static Integer N_PATHS = 3;
 
     private final DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
 
@@ -36,7 +41,7 @@ public class Controller {
     public Controller(DatabaseUtils utils) {
         nnetwork = new RoadTrafficPredictionPerceptron(utils);
         databaseUtils = utils;
-        currentInterval = 3;
+        currentInterval = 2;
     }
 
     public void start() {
@@ -44,7 +49,7 @@ public class Controller {
         currentDatetime.set(Calendar.YEAR, 2014);
         currentDatetime.set(Calendar.MONTH, 1);
         currentDatetime.set(Calendar.DAY_OF_MONTH, 20);
-        currentDatetime.set(Calendar.HOUR_OF_DAY, 21);
+        currentDatetime.set(Calendar.HOUR_OF_DAY, 1);
         currentDatetime.set(Calendar.MINUTE, 00);
         currentDatetime.set(Calendar.SECOND, 00);
         executorService = Executors.newSingleThreadScheduledExecutor();
@@ -58,13 +63,21 @@ public class Controller {
         }, 1, currentInterval, TimeUnit.SECONDS);
     }
 
-    public Integer getPathSpeedPrediction(Integer currentPathSpeed, Integer pathId) {
-        Integer speed = nnetwork.calculateSpeedPrediction(currentPathSpeed, pathId, currentDatetime.get(Calendar.HOUR_OF_DAY), 1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/);
+    public Integer getPathSpeedPrediction(Integer pathId) {
+        List<Integer> pathPreviousSpeeds = new ArrayList<Integer>();
+        for(PathStatistics st : databaseUtils.getStatisticsByPathId(pathId, 3)) {
+            pathPreviousSpeeds.add(st.getPathSpeed());
+        }
+        Integer speed = nnetwork.calculateSpeedPrediction(pathPreviousSpeeds, pathId, currentDatetime.get(Calendar.HOUR_OF_DAY), 1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/);
         return speed;
     }
 
-    public Integer getPathSpeedPrediction(Integer currentPathSpeed, Integer pathId, Integer hour) {
-        Integer speed = nnetwork.calculateSpeedPrediction(currentPathSpeed, pathId, hour, 1);
+    public Integer getPathSpeedPrediction(Integer pathId, Integer hour) {
+        List<Integer> pathPreviousSpeeds = new ArrayList<Integer>();
+        for(PathStatistics st : databaseUtils.getStatisticsByPathId(pathId, 3)) {
+            pathPreviousSpeeds.add(st.getPathSpeed());
+        }
+        Integer speed = nnetwork.calculateSpeedPrediction(pathPreviousSpeeds, pathId, hour, 1);
         return speed;
     }
 
@@ -102,11 +115,19 @@ public class Controller {
         incrementedTime.add(Calendar.HOUR_OF_DAY, 1);
         for(RoadPath path : databaseUtils.getAllPaths()) {
             databaseUtils.addNewPathStatistics(new PathStatistics(path.getId(), currentDatetime.getTime().getTime(), path.getPathSpeed()));
-            databaseUtils.addNewRule(new LearningRules(path.getId(), path.getPathSpeed(), currentDatetime.get(Calendar.HOUR_OF_DAY),
+
+            List<Integer> pathPreviousSpeeds = new ArrayList<Integer>();
+            for(PathStatistics st : databaseUtils.getStatisticsByPathId(path.getId(), 3)) {
+                pathPreviousSpeeds.add(st.getPathSpeed());
+            }
+
+            databaseUtils.addNewRule(new LearningRules(path.getId(), pathPreviousSpeeds, currentDatetime.get(Calendar.HOUR_OF_DAY),
                     1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/, getPathSpeedByHour(path.getId(), incrementedTime.get(Calendar.HOUR_OF_DAY))));
+
+
             if(path.getPathSpeed() >= 10) databaseUtils.updatePathSpeed(path.getId(), getPathSpeedByHour(path.getId(), incrementedTime.get(Calendar.HOUR_OF_DAY)));
         }
-        if(currentDatetime.get(Calendar.HOUR_OF_DAY) == 0) {
+        if(incrementedTime.get(Calendar.HOUR_OF_DAY) == 0) {
             Runnable r = new Runnable() {
                 @Override
                 public void run() {

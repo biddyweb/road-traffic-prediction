@@ -7,74 +7,87 @@ import org.neuroph.util.TransferFunctionType;
 import org.snoopdesigns.roadtraffic.db.DatabaseUtils;
 import org.snoopdesigns.roadtraffic.db.LearningRules;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class RoadTrafficPredictionPerceptron {
 
 
     private final DatabaseUtils databaseUtils;
-    private MultiLayerPerceptron nnetwork;
+    private Map<Integer, MultiLayerPerceptron> nnetworks = new HashMap<Integer, MultiLayerPerceptron>();
 
     public RoadTrafficPredictionPerceptron(DatabaseUtils databaseUtils) {
         this.databaseUtils = databaseUtils;
-        nnetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 120, 30);
+        for(int i=0;i<24; i++) {
+            MultiLayerPerceptron network = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 150, 30);
+            nnetworks.put(i, network);
+        }
     }
 
-    public Integer calculateSpeedPrediction(Integer currentSpeed, Integer pathId, Integer hourNumber, Integer dayOfWeekNumber) {
+    public Integer calculateSpeedPrediction(List<Integer> currentSpeed, Integer pathId, Integer hourNumber, Integer dayOfWeekNumber) {
 
-        DataSetRow dataRow = new DataSetRow(concat(parseNum(currentSpeed), parseNum(pathId), parseNum(hourNumber), parseNum(dayOfWeekNumber)), parseNum(0));
-        nnetwork.setInput(dataRow.getInput());
-        nnetwork.calculate();
-        double[] networkOutput = nnetwork.getOutput();
-        Integer result =  parseIntegerFromArray(networkOutput);
-        //System.out.println("Output for path " + pathId + ": " + result);
-        return result;
+        DataSetRow dataRow = new DataSetRow(concat(createArray(currentSpeed), parseNum(pathId), parseNum(dayOfWeekNumber)), parseNum(0));
+        MultiLayerPerceptron nnetwork = nnetworks.get(hourNumber);
+        if(nnetwork != null) {
+            nnetwork.setInput(dataRow.getInput());
+            nnetwork.calculate();
+            double[] networkOutput = nnetwork.getOutput();
+            Integer result = parseIntegerFromArray(networkOutput);
+            //System.out.println("Output for path " + pathId + ": " + result);
+            return result;
+        } else {
+            System.out.println("NETWORK IS NULL!");
+            return 60;
+        }
     }
 
     public void learn() {
-        nnetwork.reset();
-        nnetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 120, 30);
-        nnetwork.reset();
-        DataSet trainingSet = new DataSet(120, 30);
-        for(LearningRules rule : databaseUtils.getAllRules()) {
-            trainingSet.addRow(new DataSetRow(concat(
-                    parseNum(rule.getPathCurrentSpeed()),
-                    parseNum(rule.getPathId()),
-                    parseNum(rule.getHourNumber()),
-                    parseNum(rule.getDayOfWeekNumber())),
-                    parseNum(rule.getActualResult())));
-        }
-
-        nnetwork.getLearningRule().setMaxIterations(5000);
         System.out.println("Starting network learn....");
-        nnetwork.learn(trainingSet);
+        for(int i=0;i<24;i++) {
+            MultiLayerPerceptron nnetwork = nnetworks.get(i);
+            nnetwork.reset();
+            nnetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 150, 30);
+            nnetwork.reset();
+            nnetworks.put(i, nnetwork);
+
+            DataSet trainingSet = new DataSet(150, 30);
+            for(LearningRules rule : databaseUtils.getRulesByHour(i)) {
+                List<Integer> numbers = new ArrayList<Integer>();
+                for(Integer nn : rule.getPathCurrentSpeed()) {
+                    numbers.add(nn);
+                }
+                numbers.add(rule.getPathId());
+                numbers.add(rule.getDayOfWeekNumber());
+                trainingSet.addRow(new DataSetRow(createArray(numbers),
+                        parseNum(rule.getActualResult())));
+            }
+
+            nnetwork.getLearningRule().setMaxIterations(5000);
+
+            nnetwork.learn(trainingSet);
+        }
         System.out.println("Neuro network learned successfully!");
     }
 
     public static void test() {
-        MultiLayerPerceptron nn = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 120, 30);
-        System.out.println(nn.getLayersCount());
-        DataSet trainingSet = new DataSet(120, 30);
 
-        trainingSet.addRow(new DataSetRow(concat(
-                parseNum(60),
-                parseNum(1),
-                parseNum(10),
-                parseNum(1)),
+        MultiLayerPerceptron nn = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 150, 30);
+        System.out.println(nn.getLayersCount());
+        DataSet trainingSet = new DataSet(150, 30);
+
+
+        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(10,10,60,1,1)),
+                parseNum(20)));
+        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(10,60,60,1,1)),
+                parseNum(20)));
+        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(10,60,60,1,1)),
                 parseNum(60)));
-        trainingSet.addRow(new DataSetRow(concat(
-                parseNum(60),
-                parseNum(1),
-                parseNum(10),
-                parseNum(1)),
-                parseNum(10)));
+        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(60,60,60,1,1)),
+                parseNum(60)));
 
         nn.getLearningRule().setMaxIterations(500);
         nn.learn(trainingSet);
 
-        DataSetRow dataRow = new DataSetRow(concat(parseNum(60), parseNum(1), parseNum(10), parseNum(1)), parseNum(0));
+        DataSetRow dataRow = new DataSetRow(createArray(Arrays.asList(10, 60, 60, 1, 1)), parseNum(0));
         nn.setInput(dataRow.getInput());
         nn.calculate();
         double[] networkOutput = nn.getOutput();
@@ -221,5 +234,14 @@ public class RoadTrafficPredictionPerceptron {
         System.arraycopy(c, 0, r, aLen + bLen, cLen);
         System.arraycopy(d, 0, r, aLen + bLen+cLen, dLen);
         return r;
+    }
+
+    public static double[] createArray(List<Integer> numbers) {
+        double[] result = new double[0];
+        for(int i=0;i<numbers.size();i++) {
+            double[] arr = parseNum(numbers.get(i));
+            result = concat(result, arr);
+        }
+        return result;
     }
 }

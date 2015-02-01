@@ -1,10 +1,7 @@
 package org.snoopdesigns.roadtraffic.db;
 
 import javax.persistence.EntityManager;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class DatabaseUtils {
 
@@ -85,6 +82,24 @@ public class DatabaseUtils {
         }
     }
 
+    public List<PathStatistics> getStatisticsByPathId(Integer path, Integer n) {
+        List<PathStatistics> result = null;
+        try {
+            result = em.createQuery("SELECT t FROM PathStatistics t where t.pathId=" + path + " ORDER BY t.timestamp DESC").setMaxResults(n).getResultList();
+            while(true) {
+                if(result.size() < 3) {
+                    result.add(new PathStatistics(path, new Date().getTime(), 60));
+                } else {
+                    break;
+                }
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+        return result;
+    }
+
     public void addNewRule(LearningRules rule) {
         /*em.getTransaction().begin();
         em.persist(rule);
@@ -101,6 +116,16 @@ public class DatabaseUtils {
             return Collections.emptyList();
         }*/
         return learningRuleses;
+    }
+
+    public Set<LearningRules> getRulesByHour(Integer hour) {
+        Set<LearningRules> result = new HashSet<LearningRules>();
+        for(LearningRules rule : learningRuleses) {
+            if(rule.getHourNumber() == hour) {
+                result.add(rule);
+            }
+        }
+        return result;
     }
 
     public Set<LearningRules> getRulesByPath(Integer pathId) {

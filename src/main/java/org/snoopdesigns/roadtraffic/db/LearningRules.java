@@ -3,6 +3,7 @@ package org.snoopdesigns.roadtraffic.db;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import java.util.List;
 
 @Entity
 public class LearningRules {
@@ -12,12 +13,12 @@ public class LearningRules {
     private Integer id;
 
     private Integer pathId;
-    private Integer pathCurrentSpeed;
+    private List<Integer> pathCurrentSpeed;
     private Integer hourNumber;
     private Integer dayOfWeekNumber;
     private Integer actualResult;
 
-    public LearningRules(Integer pathId, Integer pathCurrentSpeed, Integer hourNumber, Integer dayOfWeekNumber, Integer actualResult) {
+    public LearningRules(Integer pathId, List<Integer> pathCurrentSpeed, Integer hourNumber, Integer dayOfWeekNumber, Integer actualResult) {
         this.pathId = pathId;
         this.pathCurrentSpeed = pathCurrentSpeed;
         this.hourNumber = hourNumber;
@@ -49,11 +50,11 @@ public class LearningRules {
         this.pathId = pathId;
     }
 
-    public Integer getPathCurrentSpeed() {
+    public List<Integer> getPathCurrentSpeed() {
         return pathCurrentSpeed;
     }
 
-    public void setPathCurrentSpeed(Integer pathCurrentSpeed) {
+    public void setPathCurrentSpeed(List<Integer> pathCurrentSpeed) {
         this.pathCurrentSpeed = pathCurrentSpeed;
     }
 
