@@ -7,6 +7,6 @@ public class NetworkTest {
 
     //@Test
     public void testNetwork() {
-        //RoadTrafficPredictionPerceptron.test();
+        RoadTrafficPredictionPerceptron.test();
     }
 }

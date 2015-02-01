@@ -55,6 +55,7 @@ public class RoadTrafficPredictionPerceptron {
 
     public static void test() {
         MultiLayerPerceptron nn = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 120, 30);
+        System.out.println(nn.getLayersCount());
         DataSet trainingSet = new DataSet(120, 30);
 
         trainingSet.addRow(new DataSetRow(concat(
@@ -70,7 +71,7 @@ public class RoadTrafficPredictionPerceptron {
                 parseNum(1)),
                 parseNum(10)));
 
-        nn.getLearningRule().setMaxIterations(1000);
+        nn.getLearningRule().setMaxIterations(500);
         nn.learn(trainingSet);
 
         DataSetRow dataRow = new DataSetRow(concat(parseNum(60), parseNum(1), parseNum(10), parseNum(1)), parseNum(0));
