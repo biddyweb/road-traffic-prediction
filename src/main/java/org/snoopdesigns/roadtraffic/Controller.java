@@ -1,17 +1,16 @@
 package org.snoopdesigns.roadtraffic;
 
+import org.easyrules.core.AnnotatedRulesEngine;
 import org.snoopdesigns.roadtraffic.db.DatabaseUtils;
 import org.snoopdesigns.roadtraffic.db.LearningRules;
 import org.snoopdesigns.roadtraffic.db.PathStatistics;
 import org.snoopdesigns.roadtraffic.db.RoadPath;
 import org.snoopdesigns.roadtraffic.nnetwork.RoadTrafficPredictionPerceptron;
+import org.snoopdesigns.roadtraffic.rules.RouteRule;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class Controller {
@@ -19,6 +18,7 @@ public class Controller {
     public final static Integer N_PATHS = 3;
 
     private final DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+    private int optimalRoute;
 
     public String getCurrentDatetime() {
         return df.format(currentDatetime.getTime());
@@ -41,7 +41,7 @@ public class Controller {
     public Controller(DatabaseUtils utils) {
         nnetwork = new RoadTrafficPredictionPerceptron(utils);
         databaseUtils = utils;
-        currentInterval = 2;
+        currentInterval = 1;
     }
 
     public void start() {
@@ -57,6 +57,7 @@ public class Controller {
             @Override
             public void run() {
                 updateCurrentPathsSpeed();
+                calculateOptimalRoute();
                 currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
                 System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
             }
@@ -65,7 +66,8 @@ public class Controller {
 
     public Integer getPathSpeedPrediction(Integer pathId) {
         List<Integer> pathPreviousSpeeds = new ArrayList<Integer>();
-        for(PathStatistics st : databaseUtils.getStatisticsByPathId(pathId, 3)) {
+        pathPreviousSpeeds.add(databaseUtils.getPathById(pathId).getPathSpeed());
+        for(PathStatistics st : databaseUtils.getStatisticsByPathId(pathId, 2)) {
             pathPreviousSpeeds.add(st.getPathSpeed());
         }
         Integer speed = nnetwork.calculateSpeedPrediction(pathPreviousSpeeds, pathId, currentDatetime.get(Calendar.HOUR_OF_DAY), 1/*currentDatetime.get(Calendar.DAY_OF_WEEK)*/);
@@ -81,6 +83,10 @@ public class Controller {
         return speed;
     }
 
+    public List<Integer> getOptimalRoute() {
+        return RoadPathRoutes.routePaths.get(optimalRoute);
+    }
+
     public void reinitTimer(Integer interval) {
         timer.cancel(true);
         currentInterval = interval;
@@ -88,10 +94,20 @@ public class Controller {
             @Override
             public void run() {
                 updateCurrentPathsSpeed();
+                calculateOptimalRoute();
                 currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
                 System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
             }
         }, currentInterval, currentInterval, TimeUnit.SECONDS);
+    }
+
+    private void calculateOptimalRoute() {
+        RouteRule rule = new RouteRule();
+        rule.setController(this);
+        AnnotatedRulesEngine rulesEngine =
+                new AnnotatedRulesEngine();
+        rulesEngine.registerRule(rule);
+        rulesEngine.fireRules();
     }
 
     public void destroy() {
@@ -137,6 +153,7 @@ public class Controller {
                         @Override
                         public void run() {
                             updateCurrentPathsSpeed();
+                            calculateOptimalRoute();
                             currentDatetime.add(Calendar.HOUR_OF_DAY, 1);
                             System.out.println("============== Period tick !" + df.format(currentDatetime.getTime()));
                         }
@@ -149,5 +166,9 @@ public class Controller {
 
     private Integer getPathSpeedByHour(Integer pathId, Integer hour) {
         return RoadPathSampleSpeed.pathSpeed.get(pathId).get(hour);
+    }
+
+    public void setOptimalRoute(int i) {
+        this.optimalRoute = i;
     }
 }

@@ -1,0 +1,77 @@
+		var mapPrediction;
+
+		var geoJsonLayerPrediction;
+
+		var mapDataPrediction;
+
+		function getParameterByName(name) {
+            name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+            var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+                results = regex.exec(location.search);
+            return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+        }
+
+		function onEachFeature(feature, layer) {
+			var popupContent = "";
+
+			if (feature.properties && feature.properties.popupContent) {
+				popupContent += feature.properties.popupContent;
+			}
+			layer.bindPopup(popupContent);
+		}
+
+		function drawMapPrediction() {
+			L.tileLayer('https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png', {
+				maxZoom: 18,
+				attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+					'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+					'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+				id: 'examples.map-20v6611k'
+			}).addTo(mapPrediction);
+
+			geoJsonLayerPrediction = L.geoJson(mapDataPrediction, {
+				style: function (feature) {
+					return feature.properties && feature.properties.style;
+				},
+				onEachFeature: onEachFeature,
+				pointToLayer: function (feature, latlng) {
+					return L.circleMarker(latlng, {
+						radius: 8,
+						fillColor: "#ff7800",
+						color: "#000",
+						weight: 1,
+						opacity: 1,
+						fillOpacity: 0.8
+					});
+
+				}
+			}).addTo(mapPrediction);
+		}
+
+		window.onload = function() {
+
+			var interval = getParameterByName('interval');
+        	mapPrediction = L.map('mapPrediction').setView([59.896312, 30.423419], 15);
+			drawMaps(true);
+			if(interval != null && interval != '') {
+        		setInterval(drawMaps, interval);
+        	} else {
+        		setInterval(drawMaps, 1000);
+        	}
+		}
+
+		function drawMaps(first) {
+
+			if(!first) mapPrediction.removeLayer(geoJsonLayerPrediction);
+
+            $.getJSON("/webapp-main/api?action=predictedtime", function(json) {
+                var elem = document.getElementById("predictedtime");
+                elem.innerHTML="<h3>Predicted traffic at: " + json.time + " </h3>";
+            });
+
+        	$.getJSON("/webapp-main/api?action=route-prediction", function(json) {
+        		console.log(json); // this will show the info it in firebug console
+        		mapDataPrediction = json;
+        		drawMapPrediction();
+        	});
+        }

@@ -87,7 +87,7 @@ public class DatabaseUtils {
         try {
             result = em.createQuery("SELECT t FROM PathStatistics t where t.pathId=" + path + " ORDER BY t.timestamp DESC").setMaxResults(n).getResultList();
             while(true) {
-                if(result.size() < 3) {
+                if(result.size() < n) {
                     result.add(new PathStatistics(path, new Date().getTime(), 60));
                 } else {
                     break;

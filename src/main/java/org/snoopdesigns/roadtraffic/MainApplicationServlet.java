@@ -63,6 +63,33 @@ public class MainApplicationServlet extends HttpServlet {
                     features.add(lineFeature);
                 }
                 out.print(new Gson().toJson(new FeatureCollection(features)));
+            } else if (request.getParameter("action").equals("route-prediction")) {
+                List<Feature> features = new ArrayList<Feature>();
+                List<Integer> optPaths = controller.getOptimalRoute();
+                for (RoadPath path : utils.getAllPaths()) {
+                    Feature lineFeature = new Feature(new LineString(Arrays.asList(
+                            new Point(path.getStartCoords()[0], path.getStartCoords()[1]),
+                            new Point(path.getEndCoords()[0], path.getEndCoords()[1]))));
+                    Integer pathSpeedPrediction = controller.getPathSpeedPrediction(path.getId());
+                    lineFeature.setProperties(
+                            new Properties(
+                                    "Speed: " + pathSpeedPrediction + ", ID = " + path.getId(),
+                                    new Style(controller.calculatePathColor(pathSpeedPrediction))));
+                    lineFeature.setId(String.valueOf(path.getId()));
+                    features.add(lineFeature);
+                    if(optPaths.contains(path.getId())) {
+                        lineFeature = new Feature(new LineString(Arrays.asList(
+                                new Point(path.getStartCoords()[0], path.getStartCoords()[1]),
+                                new Point(path.getEndCoords()[0], path.getEndCoords()[1]))));
+                        lineFeature.setProperties(
+                                new Properties(
+                                        "Speed: " + pathSpeedPrediction + ", ID = " + path.getId(),
+                                        new Style("#000000")));
+                        lineFeature.setId(String.valueOf(path.getId()));
+                        features.add(lineFeature);
+                    }
+                }
+                out.print(new Gson().toJson(new FeatureCollection(features)));
             } else if (request.getParameter("action").equals("time")) {
                 out.print("{\"time\": \"" + controller.getCurrentDatetime() + "\"}");
             } else if (request.getParameter("action").equals("predictedtime")) {

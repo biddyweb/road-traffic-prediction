@@ -1,11 +1,13 @@
 package org.snoopdesigns.roadtraffic.nnetwork;
 
+import org.easyrules.core.AnnotatedRulesEngine;
 import org.neuroph.core.data.DataSet;
 import org.neuroph.core.data.DataSetRow;
 import org.neuroph.nnet.MultiLayerPerceptron;
 import org.neuroph.util.TransferFunctionType;
 import org.snoopdesigns.roadtraffic.db.DatabaseUtils;
 import org.snoopdesigns.roadtraffic.db.LearningRules;
+import org.snoopdesigns.roadtraffic.rules.RouteRule;
 
 import java.util.*;
 
@@ -18,26 +20,85 @@ public class RoadTrafficPredictionPerceptron {
     public RoadTrafficPredictionPerceptron(DatabaseUtils databaseUtils) {
         this.databaseUtils = databaseUtils;
         for(int i=0;i<24; i++) {
-            MultiLayerPerceptron network = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 150, 30);
+            MultiLayerPerceptron network = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 20, 3);
             nnetworks.put(i, network);
         }
     }
 
     public Integer calculateSpeedPrediction(List<Integer> currentSpeed, Integer pathId, Integer hourNumber, Integer dayOfWeekNumber) {
 
-        DataSetRow dataRow = new DataSetRow(concat(createArray(currentSpeed), parseNum(pathId), parseNum(dayOfWeekNumber)), parseNum(0));
+        /*DataSetRow dataRow = new DataSetRow(concat(createArrayOfSpeeds(currentSpeed),
+                createPathIDArray(pathId),
+                createWeekdayArray(dayOfWeekNumber)),
+                getSpeedArray(0));
         MultiLayerPerceptron nnetwork = nnetworks.get(hourNumber);
         if(nnetwork != null) {
             nnetwork.setInput(dataRow.getInput());
             nnetwork.calculate();
             double[] networkOutput = nnetwork.getOutput();
-            Integer result = parseIntegerFromArray(networkOutput);
-            //System.out.println("Output for path " + pathId + ": " + result);
-            return result;
+            Integer result = getResult(networkOutput);
+            if(result == 1) return 60;
+            if(result == 2) return 30;
+            if(result == 3) return 10;
+            else return 0;
+            //return result;
         } else {
             System.out.println("NETWORK IS NULL!");
             return 60;
+        }*/
+        Map<LearningRules, Integer> rules = new HashMap<LearningRules, Integer>();
+        for(LearningRules rule : databaseUtils.getRulesByHour(hourNumber)) {
+            if(rule.getPathId() == pathId) {
+                Integer ruleDepth = 0;
+                if(currentSpeed.get(2) == rule.getPathCurrentSpeed().get(2)) {
+                    ruleDepth = 1;
+                    if(currentSpeed.get(1) == rule.getPathCurrentSpeed().get(1)) {
+                        ruleDepth = 2;
+                        if(currentSpeed.get(0) == rule.getPathCurrentSpeed().get(0)) {
+                            ruleDepth = 3;
+                        }
+                    }
+                }
+                rules.put(rule, ruleDepth);
+            }
         }
+
+        Iterator entries = rules.entrySet().iterator();
+        Integer maxDepth = 0;
+        while (entries.hasNext()) {
+            Map.Entry thisEntry = (Map.Entry) entries.next();
+            Object key = thisEntry.getKey();
+            Integer value = (Integer)thisEntry.getValue();
+            if(value > maxDepth) maxDepth = value;
+        }
+
+        List<LearningRules> maxDepthRules = new ArrayList<LearningRules>();
+        entries = rules.entrySet().iterator();
+        while (entries.hasNext()) {
+            Map.Entry thisEntry = (Map.Entry) entries.next();
+            LearningRules key = (LearningRules)thisEntry.getKey();
+            Integer value = (Integer)thisEntry.getValue();
+            if(value == maxDepth) {
+                maxDepthRules.add(key);
+            }
+        }
+
+        if(maxDepth == 3) {
+            Integer total = 0;
+            for(LearningRules rulee : maxDepthRules) {
+                total += rulee.getActualResult();
+            }
+            return total / maxDepthRules.size();
+        } else if(maxDepth == 2) {
+            return currentSpeed.get(0) + (currentSpeed.get(0) - currentSpeed.get(1));
+        } else if(maxDepth == 1) {
+            return currentSpeed.get(0) + (currentSpeed.get(0) - currentSpeed.get(1));
+        } else if(maxDepth == 0) {
+            return currentSpeed.get(0);
+        }
+
+        return 0;
+
     }
 
     public void learn() {
@@ -45,23 +106,23 @@ public class RoadTrafficPredictionPerceptron {
         for(int i=0;i<24;i++) {
             MultiLayerPerceptron nnetwork = nnetworks.get(i);
             nnetwork.reset();
-            nnetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 150, 30);
+            nnetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 20, 3);
             nnetwork.reset();
             nnetworks.put(i, nnetwork);
 
-            DataSet trainingSet = new DataSet(150, 30);
+            DataSet trainingSet = new DataSet(20, 3);
             for(LearningRules rule : databaseUtils.getRulesByHour(i)) {
-                List<Integer> numbers = new ArrayList<Integer>();
+                List<Integer> speeds = new ArrayList<Integer>();
                 for(Integer nn : rule.getPathCurrentSpeed()) {
-                    numbers.add(nn);
+                    speeds.add(nn);
                 }
-                numbers.add(rule.getPathId());
-                numbers.add(rule.getDayOfWeekNumber());
-                trainingSet.addRow(new DataSetRow(createArray(numbers),
-                        parseNum(rule.getActualResult())));
+                trainingSet.addRow(new DataSetRow(concat(createArrayOfSpeeds(speeds),
+                        createPathIDArray(rule.getPathId()),
+                        createWeekdayArray(rule.getDayOfWeekNumber())),
+                        getSpeedArray(rule.getActualResult())));
             }
 
-            nnetwork.getLearningRule().setMaxIterations(5000);
+            nnetwork.getLearningRule().setMaxIterations(15000);
 
             nnetwork.learn(trainingSet);
         }
@@ -70,137 +131,44 @@ public class RoadTrafficPredictionPerceptron {
 
     public static void test() {
 
-        MultiLayerPerceptron nn = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 150, 30);
-        System.out.println(nn.getLayersCount());
-        DataSet trainingSet = new DataSet(150, 30);
 
 
-        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(10,10,60,1,1)),
-                parseNum(20)));
-        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(10,60,60,1,1)),
-                parseNum(20)));
-        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(10,60,60,1,1)),
-                parseNum(60)));
-        trainingSet.addRow(new DataSetRow(createArray(Arrays.asList(60,60,60,1,1)),
-                parseNum(60)));
+        MultiLayerPerceptron nn = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, 20, 3);
+        DataSet trainingSet = new DataSet(20,3);
+
+        double[] test1 = createPathIDArray(14);
+        double[] test2 = createPathIDArray(7);
+
+
+        trainingSet.addRow(new DataSetRow(concat(createArrayOfSpeeds(Arrays.asList(60,60,60)),
+                createPathIDArray(1),
+                createWeekdayArray(1)),
+                getSpeedArray(60)));
 
         nn.getLearningRule().setMaxIterations(500);
         nn.learn(trainingSet);
 
-        DataSetRow dataRow = new DataSetRow(createArray(Arrays.asList(10, 60, 60, 1, 1)), parseNum(0));
+        DataSetRow dataRow = new DataSetRow(concat(createArrayOfSpeeds(Arrays.asList(60, 60, 60)),
+                createPathIDArray(1),
+                createWeekdayArray(1)),
+                getSpeedArray(0));
         nn.setInput(dataRow.getInput());
         nn.calculate();
         double[] networkOutput = nn.getOutput();
-        Integer result =  parseIntegerFromArray(networkOutput);
+        Integer result =  getResult(networkOutput);
         System.out.println("Output for path :" + result);
     }
 
-    public static Integer parseIntegerFromArray(double[] array) {
-
-        List<Integer> tens = new ArrayList<Integer>();
-        List<Double> tmp = new ArrayList<Double>();
-        for(int i=10;i<20;i++) {
-            tmp.add(array[i]);
-        }
-        double maxTensValue = Collections.max(tmp);
-        for(int i=10;i<20;i++) {
-            if(array[i] > maxTensValue / 3 * 2) {
-                tens.add(i-10);
-            }
-        }
-
-        tmp.clear();
-        List<Integer> units = new ArrayList<Integer>();
-
-        for(int i=20;i<30;i++) {
-            tmp.add(array[i]);
-        }
-        double maxUnitsValue = Collections.max(tmp);
-
-        for(int i=20;i<30;i++) {
-            tmp.add(array[i]);
-            if(array[i] > maxUnitsValue / 3 * 2) {
-                units.add(i-20);
-            }
-        }
-
-
-
-        int minTens = Collections.min(tens);
-        int maxTens = Collections.max(tens);
-        int minUnits = Collections.min(units);
-        int maxUnits = Collections.max(units);
-
-        int ten = (minTens + maxTens) / 2;
-        int unit = (minUnits + maxUnits) / 2;
-
-        return ((10 * (minTens) + minUnits) + (10 * (maxTens) + maxUnits)) / 2;
-    }
-
-    /*public Integer parseIntegerFromArray(double[] array) {
+    public static Integer getResult(double[] arr) {
         double max = -1;
-        int maxIndex = 0;
-        for(int i=0;i<10;i++) {
-            if(array[i] > max) {
-                max = array[i];
-                maxIndex = i;
+        int result = -1;
+        for(int i=0;i<3;i++) {
+            if(arr[i] > max) {
+                result = i+1;
+                max = arr[i];
             }
         }
-        int hundreds = maxIndex;
-
-        max = -1;
-        maxIndex = 0;
-
-        for(int i=10;i<20;i++) {
-            if(array[i] > max) {
-                max = array[i];
-                if(array[i] > 0.1) System.out.println("Max: " + Integer.valueOf(i-10) + ": " + array[i]);
-                maxIndex = i-10;
-            }
-        }
-        int tens = maxIndex;
-
-        max = -1;
-        maxIndex = 0;
-
-        for(int i=20;i<30;i++) {
-            if(array[i] > max) {
-                max = array[i];
-                maxIndex = i-20;
-            }
-        }
-        int units = maxIndex;
-
-        return 100 * hundreds + 10 * tens + units;
-    }*/
-
-    public static double[] parseNum(Integer num) {
-        Integer first = 0;
-        Integer second = 0;
-        Integer third;
-        if(num < 10) return concat(convertNumberToArray(0), convertNumberToArray(0), convertNumberToArray(num));
-        else {
-            third = num % 10;
-            num /= 10;
-            second = num % 10;
-            num /= 10;
-            first = num % 10;
-            return concat(convertNumberToArray(first), convertNumberToArray(second), convertNumberToArray(third));
-        }
-    }
-
-    private static double[] convertNumberToArray(Integer num) {
-        if(num == 0) return new double[] {1,0,0,0,0,0,0,0,0,0};
-        if(num == 1) return new double[] {0,1,0,0,0,0,0,0,0,0};
-        if(num == 2) return new double[] {0,0,1,0,0,0,0,0,0,0};
-        if(num == 3) return new double[] {0,0,0,1,0,0,0,0,0,0};
-        if(num == 4) return new double[] {0,0,0,0,1,0,0,0,0,0};
-        if(num == 5) return new double[] {0,0,0,0,0,1,0,0,0,0};
-        if(num == 6) return new double[] {0,0,0,0,0,0,1,0,0,0};
-        if(num == 7) return new double[] {0,0,0,0,0,0,0,1,0,0};
-        if(num == 8) return new double[] {0,0,0,0,0,0,0,0,1,0};
-        if(num == 9) return new double[] {0,0,0,0,0,0,0,0,0,1};
-        return null;
+        return result;
     }
 
     public static double[] concat(double[] a, double[] b) {
@@ -236,12 +204,52 @@ public class RoadTrafficPredictionPerceptron {
         return r;
     }
 
-    public static double[] createArray(List<Integer> numbers) {
+    public static double[] createWeekdayArray(Integer weekDay) {
+        double[] result = new double[3];
+        for(int i=0;i<3;i++) {
+            result[i] = 0;
+        }
+        String s = Integer.toBinaryString(weekDay);
+        int jj = 2;
+        for(int i=s.length()-1;i>-1;i--) {
+            if(s.charAt(i) == '0') result[jj] = 0; else result[jj] = 1;
+            jj--;
+        }
+        return result;
+    }
+
+    public static double[] createPathIDArray(Integer id) {
+        double[] result = new double[8];
+        for(int i=0;i<8;i++) {
+            result[i] = 0;
+        }
+        String s = Integer.toBinaryString(id);
+        int jj = 7;
+        for(int i=s.length()-1;i>-1;i--) {
+            if(s.charAt(i) == '0') result[jj] = 0; else result[jj] = 1;
+            jj--;
+        }
+        return result;
+    }
+
+    public static double[] createArrayOfSpeeds(List<Integer> speeds) {
         double[] result = new double[0];
-        for(int i=0;i<numbers.size();i++) {
-            double[] arr = parseNum(numbers.get(i));
+        for(int i=0;i<speeds.size();i++) {
+            double[] arr = getSpeedArray(speeds.get(i));
             result = concat(result, arr);
         }
+        return result;
+    }
+
+    public static double[] getSpeedArray(Integer speed) {
+        double[] result = new double[3];
+        for(int i=0;i<3;i++) {
+            result[i] = 0;
+        }
+        if(speed > 50) result[0] = 1;
+        if(speed > 15 && speed <= 50) result[1] = 1;
+        if(speed <= 15) result[2] = 1;
+
         return result;
     }
 }
